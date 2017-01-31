@@ -21,6 +21,7 @@
 A simple tool to manipulate data from/to ascii files.
 """
 
+import copy as cp
 import numpy as np
 import fnmatch as fnm
 
@@ -70,7 +71,7 @@ class AsciiTable():
     for i, item in enumerate(self.data):
 
       # Check value types
-      if not value or type(data) != list:
+      if not data or type(data) != list:
         element = data
       else:
         element = data[i]
@@ -107,6 +108,24 @@ class AsciiTable():
       self.data[i][new_key] = self.data[i].pop(old_key)
 
 
+  def Replace(self, key, old_value, new_value):
+    """
+    Replace occurences of a key give value.
+    If old_value is '*' it replaces all values.
+    """
+
+    # Loop over data
+    for i, item in enumerate(self.data):
+
+      # Replace all keys
+      if old_value == '*':
+        self.data[i][key] = new_value
+      # Replace matching values only
+      else:
+        if self.data[i][key] == old_value:
+          self.data[i][key] = new_value
+
+
   def Size(self):
     """
     Method to return size of the data matrix.
@@ -123,7 +142,8 @@ class AsciiTable():
                    dtype='float',
                    delimiter=',',
                    skipline=0,
-                   comment='#'):
+                   comment='#',
+                   empty=[]):
     """
     Method to import data from ascii file (tabular)
     """
@@ -135,12 +155,17 @@ class AsciiTable():
       for i in range(0, skipline):
         f.readline()
 
-      # Import header if not passed
+      # Import header (skip comments)
       if not header:
-        line = f.readline()
-        self.header = line.strip().split(delimiter)
-      else:
-        self.header= header
+        while 1:
+          line = f.readline()
+          if line[0] != comment: break
+        header = line.strip().split(delimiter)
+
+      # Removing empty fields from header
+      for h in header:
+        if h != '':
+          self.header.append(h)
 
       # Loop over lines
       for line in f:
@@ -151,19 +176,22 @@ class AsciiTable():
 
           # Loop over data values
           data = []
-          for i, k in enumerate(self.header):
+          for i, h in enumerate(header):
 
-            # Check data type
-            if type(dtype) == list:
-              dtp = dtype[i]
-            else:
-              dtp = dtype
+            # Skip empty header fields
+            if h != '':
 
-            # Check for empty values
-            if not value[i]:
-              value[i] = 'NaN'
+              # Data type(s) switch
+              if type(dtype) == list:
+                dtp = dtype[i]
+              else:
+                dtp = dtype
 
-            data.append(_CastValue(value[i],dtp))
+              # Check for empty elements
+              if not value[i]:
+                value[i] = empty
+
+              data.append(_CastValue(value[i],dtp))
 
           self.AddElement(data)
 
@@ -190,7 +218,8 @@ class AsciiTable():
 
       # Write data (loop over rows)
       for i, item in enumerate(self.data):
-        data = delimiter.join([str(item[j]) for j in self.header])
+        data = [_CastValue(item[j],'s') for j in self.header]
+        data = delimiter.join(data)
 
         if i < (self.Size()[0]-1):
           f.write(data + '\n')
@@ -254,21 +283,59 @@ class AsciiTable():
     if type(filter_key) is list:
 
       for item in self.data:
-        if float(item[key]) >= filter_key[0] and \
-           float(item[key]) < filter_key[1]:
-          NewTab.data.append(item)
+
+        if not _isNaN(item[key]):
+          ik = _CastValue(item[key])
+
+          if ik >= filter_key[0] and ik <= filter_key[1]:
+            NewTab.data.append(item)
 
     return NewTab
 
 
 def _CastValue(value, dtype='float'):
   """
+  Private method to recast variables.
   """
 
-  if dtype == 'string':
-    value = str(value)
+  # Check for empty fields or nans
+  if not _isEmpty(value) and not _isNaN(value):
 
-  if dtype == 'float':
-    value = float(value)
+    # Data casting
+    if dtype in ['Int','int','I','i']:
+      value = int(value)
+
+    if dtype in ['Float','float','F','f']:
+      value = float(value)
+
+    if dtype in ['String','string','S','s']:
+      value = str(value)
+
+  else:
+
+    # Using default strings
+    if dtype in ['String','string','S','s']:
+
+      if _isEmpty(value):
+        value = ''
+
+      if _isNaN(value):
+        value = 'nan'
 
   return value
+
+
+def _isNaN(number):
+  """
+  Simple private method to check if a number is NaN.
+  It returns a boolean evaluation.
+  """
+  return number != number
+
+  
+def _isEmpty(number):
+  """
+  Simple private method to check if a variable (list) is empty.
+  It returns a boolean evaluation.
+  """
+  return (number == [] or number == '')

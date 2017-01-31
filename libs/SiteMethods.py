@@ -1,19 +1,20 @@
+#!/usr/bin/env python
 # -*- coding: utf-8 -*-
-
-# Copyright (C) 2016 GEM Foundation
 #
-# SeismicSiteTool is free software: you can redistribute it and/or modify it
-# under the terms of the GNU Affero General Public License as published
-# by the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
+# Copyright (C) 2010-2017 GEM Foundation
 #
-# SeismicSiteTool is distributed in the hope that it will be useful,
+# The Site Response Toolkit (SRTK) is free software: you can redistribute
+# it and/or modify it under the terms of the GNU Affero General Public
+# License as published by the Free Software Foundation, either version
+# 3 of the License, or (at your option) any later version.
+#
+# SRTK is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+# GNU Affero General Public License for more details.
 #
 # You should have received a copy of the GNU Affero General Public License
-# along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
+# with this download. If not, see <http://www.gnu.org/licenses/>
 #
 # Author: Poggi Valerio
 
@@ -21,9 +22,10 @@
 Collection of standard functions for site response analysis
 """
 
-import numpy as np
-import scipy.optimize as spo
+import numpy as _np
+import scipy.optimize as _spo
 
+#-----------------------------------------------------------------------------------------
 
 def TTAverageVelocity(hl, vs, z):
   """
@@ -43,13 +45,17 @@ def TTAverageVelocity(hl, vs, z):
   # Initialisation
   lnum = len(hl)
 
-  hl = np.array(hl)
-  vs = np.array(vs)
+  # Variable casting
+  hl = _np.array(hl, dtype='float')
+  vs = _np.array(vs, dtype='float')
+  z = float(z)
 
   # Depth averaging is done on slowness
   vsz = 1./DepthAverage(lnum, hl, 1./vs, z)
 
   return vsz
+
+#-----------------------------------------------------------------------------------------#-----------------------------------------------------------------------------------------
 
 
 def QwlApproxSolver(hl, vs, dn, fr):
@@ -77,14 +83,14 @@ def QwlApproxSolver(hl, vs, dn, fr):
   fnum = len(fr)
   lnum = len(hl)
 
-  hl = np.array(hl)
-  vs = np.array(vs)
-  dn = np.array(dn)
+  hl = _np.array(hl)
+  vs = _np.array(vs)
+  dn = _np.array(dn)
 
-  qwhl = np.zeros(fnum)
-  qwvs = np.zeros(fnum)
-  qwdn = np.zeros(fnum)
-  qwaf = np.zeros(fnum)
+  qwhl = _np.zeros(fnum)
+  qwvs = _np.zeros(fnum)
+  qwdn = _np.zeros(fnum)
+  qwaf = _np.zeros(fnum)
 
   # Rock reference (last layer)
   refv = vs[-1]
@@ -93,11 +99,11 @@ def QwlApproxSolver(hl, vs, dn, fr):
   for nf in range(fnum):
 
     # Upper depth bound for the search
-    ubnd = np.max(vs)/(4.*fr[nf])
+    ubnd = _np.max(vs)/(4.*fr[nf])
 
     # Search for quarter-wavelength depth
-    qwhl[nf] = spo.fminbound(QwlFitFunc, 0., ubnd,
-                             args=(lnum,hl,1./vs,fr[nf]))
+    qwhl[nf] = _spo.fminbound(QwlFitFunc, 0., ubnd,
+                              args=(lnum,hl,1./vs,fr[nf]))
 
     # Computing average velocity (note: slowness is used)
     qwvs[nf] = 1./DepthAverage(lnum, hl, 1./vs, qwhl[nf])
@@ -106,10 +112,11 @@ def QwlApproxSolver(hl, vs, dn, fr):
     qwdn[nf] = DepthAverage(lnum, hl, dn, qwhl[nf])
 
     # Computing amplification function
-    qwaf[nf] = np.sqrt((refd*refv)/(qwdn[nf]*qwvs[nf]))
+    qwaf[nf] = _np.sqrt((refd*refv)/(qwdn[nf]*qwvs[nf]))
 
   return qwhl, qwvs, qwdn, qwaf
 
+#-----------------------------------------------------------------------------------------
 
 def QwlFitFunc(z, lnum, hl, sl, fr):
   """
@@ -117,10 +124,11 @@ def QwlFitFunc(z, lnum, hl, sl, fr):
   """
 
   qwsl = DepthAverage(lnum, hl, sl, z)
-  obj = np.abs(z-(1/(4.*fr*qwsl)))
+  obj = _np.abs(z-(1/(4.*fr*qwsl)))
   
   return obj
 
+#-----------------------------------------------------------------------------------------
 
 def DepthAverage(lnum, hl, par, z):
   """
@@ -146,6 +154,7 @@ def DepthAverage(lnum, hl, par, z):
 
   return sum/z
 
+#-----------------------------------------------------------------------------------------
 
 def Kappa0(hl, vs, qs, z=[]):
   """
@@ -157,9 +166,13 @@ def Kappa0(hl, vs, qs, z=[]):
   # Initialisation
   lnum = len(hl)
 
+  hl = _np.array(hl)
+  vs = _np.array(vs)
+  qs = _np.array(qs)
+
   # If z not given, using the whole profile
   if not z:
-    z = np.sum(hl)
+    z = _np.sum(hl)
 
   # Elastic property vector
   par = z/(vs*qs)
@@ -169,6 +182,7 @@ def Kappa0(hl, vs, qs, z=[]):
 
   return kappa0
 
+#-----------------------------------------------------------------------------------------
 
 def ShTransferFunction(Hl, Vs, Dn, Qs, Freq, Iang=0., Elastic=False):
   """
@@ -178,62 +192,62 @@ def ShTransferFunction(Hl, Vs, Dn, Qs, Freq, Iang=0., Elastic=False):
 
   # Variable recasting
   nlayer = len(Hl)
-  hl = np.array(Hl,dtype='complex128')
-  vs = np.array(Vs,dtype='complex128')
-  dn = np.array(Dn,dtype='complex128')
-  qs = np.array(Qs,dtype='complex128')
-  freq = np.array(Freq)
-  iang = np.array(Iang)
+  hl = _np.array(Hl,dtype='complex128')
+  vs = _np.array(Vs,dtype='complex128')
+  dn = _np.array(Dn,dtype='complex128')
+  qs = _np.array(Qs,dtype='complex128')
+  freq = _np.array(Freq)
+  iang = _np.array(Iang)
 
   # Angular frequency conversion
-  angf = 2.*np.pi*freq
+  angf = 2.*_np.pi*freq
 
   # Attenuation using complex velocities
   if not Elastic:
     vs = vs*((2.*qs*1j)/(2.*qs*1j-1.))
 
   # Angle of propagation within layers
-  iD = np.zeros((nlayer,1))
-  iCORE = np.zeros((nlayer,nlayer),dtype='complex128')
+  iD = _np.zeros((nlayer,1))
+  iCORE = _np.zeros((nlayer,nlayer),dtype='complex128')
 
-  iD[0] = np.sin(iang)
+  iD[0] = _np.sin(iang)
   iCORE[0,-1] = 1.
 
   for nl in range(nlayer-1):
       iCORE[nl+1,nl] = 1./vs[nl]
       iCORE[nl+1,nl+1] = -1./vs[nl+1]
 
-  iA = np.linalg.solve(iCORE,iD)
+  iA = _np.linalg.solve(iCORE,iD)
 
-  iS = np.arcsin(iA)
+  iS = _np.arcsin(iA)
 
   # Lame Parameter(s)
-  mu = np.zeros((nlayer,1),dtype='complex128')
+  mu = _np.zeros((nlayer,1),dtype='complex128')
 
   for nl in range(nlayer):
       mu[nl]=dn[nl]*(vs[nl]**2)
 
   # Horizontal and vertical slowness
-  ns = np.zeros((nlayer,1),dtype='complex128')
+  ns = _np.zeros((nlayer,1),dtype='complex128')
 
   for nl in range(nlayer):
-      ns[nl]=np.cos(iS[nl])/vs[nl]
+      ns[nl]=_np.cos(iS[nl])/vs[nl]
 
   # Building data vector
-  A = np.zeros((nlayer*2,1))
-  D = np.zeros((nlayer*2,1))
+  A = _np.zeros((nlayer*2,1))
+  D = _np.zeros((nlayer*2,1))
   D[-1] = 1.
 
   # Dispacement and transfer function initialisation
   fnum = len(Freq)
-  htu = np.zeros((fnum,1),dtype='complex128')
-  hbu = np.zeros((fnum,1),dtype='complex128')
-  htf = np.zeros((fnum,1),dtype='complex128')
+  htu = _np.zeros((fnum,1),dtype='complex128')
+  hbu = _np.zeros((fnum,1),dtype='complex128')
+  htf = _np.zeros((fnum,1),dtype='complex128')
 
   for nf, af in enumerate(angf):
 
     # Building core matrix
-    CORE = np.zeros((nlayer*2,nlayer*2),dtype='complex128')
+    CORE = _np.zeros((nlayer*2,nlayer*2),dtype='complex128')
 
     # Free surface constraints
     CORE[0,0] = 1.
@@ -245,8 +259,8 @@ def ShTransferFunction(Hl, Vs, Dn, Qs, Freq, Iang=0., Elastic=False):
       row = (nl*2)+1
       col = nl*2
 
-      expDSA = np.exp(1j*af*ns[nl]*hl[nl])
-      expUSA = np.exp(-1j*af*ns[nl]*hl[nl])
+      expDSA = _np.exp(1j*af*ns[nl]*hl[nl])
+      expUSA = _np.exp(-1j*af*ns[nl]*hl[nl])
 
       CORE[row,col+0] = expDSA[0]
       CORE[row,col+1] = expUSA[0]
@@ -263,9 +277,9 @@ def ShTransferFunction(Hl, Vs, Dn, Qs, Freq, Iang=0., Elastic=False):
 
     # solving linear system
     try:
-        A = np.linalg.solve(CORE,D)
+        A = _np.linalg.solve(CORE,D)
     except:
-        A[:] = np.nan
+        A[:] = _np.nan
 
     # Computing displacements
     htu[nf] = A[0]+A[1]
@@ -274,6 +288,7 @@ def ShTransferFunction(Hl, Vs, Dn, Qs, Freq, Iang=0., Elastic=False):
 
   return htf
 
+#-----------------------------------------------------------------------------------------
 
 def GetResFreq(Freq, AmpF):
   """
@@ -281,8 +296,10 @@ def GetResFreq(Freq, AmpF):
   Output are two arrays: resonce frequencies and amplitude maxima.
   """
 
-  Fn = np.array([])
-  An = np.array([])
+  Fn = _np.array([])
+  An = _np.array([])
+
+  AmpF = _np.abs(AmpF)
 
   for nf, fr in enumerate(Freq[:-2]):
 
@@ -294,8 +311,37 @@ def GetResFreq(Freq, AmpF):
     if (a1-a0) > 0 and (a2-a1) < 0:
 
       # Storing value
-      Fn = np.append(Fn,fr)
-      An = np.append(An,a1)
+      Fn = _np.append(Fn,fr)
+      An = _np.append(An,a1)
 
   return Fn, An
 
+#-----------------------------------------------------------------------------------------
+
+def AttenuationDecay(Freq, Kappa0):
+  """
+  Compute the frequency-dependent attenuation function for a given Kappa0.
+  """
+
+  # Initialisation
+  Freq = _np.array(Freq)
+
+  # Computing attenuation function
+  AttF = _np.exp(-_np.pi*Kappa0*Freq)
+
+  return AttF
+
+#-----------------------------------------------------------------------------------------
+
+def FrequencyAxis(Fmin, Fmax, Fnum, Log=True):
+  """
+  Compute a lin/log spaced frequency axis.
+  """
+
+  # Computing frequency axis
+  if Log:
+    Freq = _np.logspace(_np.log10(Fmin), _np.log10(Fmax), Fnum)
+  else:
+    Freq = _np.linspace(Fmin, Fmax, Fnum)
+
+  return Freq

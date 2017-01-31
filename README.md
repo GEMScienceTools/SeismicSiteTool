@@ -18,3 +18,4 @@ To do:
 - Response spectral amplification using RVT
 - Waveform convolution and basic signal processing methods
 - Soil profile randomisation
+- Implement Xml database file
