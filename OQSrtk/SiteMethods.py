@@ -57,7 +57,6 @@ def TTAverageVelocity(hl, vs, z):
 
 #-----------------------------------------------------------------------------------------#-----------------------------------------------------------------------------------------
 
-
 def QwlApproxSolver(hl, vs, dn, fr):
   """
   This function solves the quarter-wavelength problem
@@ -76,7 +75,6 @@ def QwlApproxSolver(hl, vs, dn, fr):
     qwhl = vector of quarter-wavelength depths
     qwvs = vector of quarter-wavelength velocities
     qwdn = vector of quarter-wavelength densities
-    qwaf = vector of quarter-wavelength amp. factors
   """
 
   # Initialisation
@@ -90,11 +88,6 @@ def QwlApproxSolver(hl, vs, dn, fr):
   qwhl = _np.zeros(fnum)
   qwvs = _np.zeros(fnum)
   qwdn = _np.zeros(fnum)
-  qwaf = _np.zeros(fnum)
-
-  # Rock reference (last layer)
-  refv = vs[-1]
-  refd = dn[-1]
 
   for nf in range(fnum):
 
@@ -111,10 +104,7 @@ def QwlApproxSolver(hl, vs, dn, fr):
     # Computing average density (for amplification function)
     qwdn[nf] = DepthAverage(lnum, hl, dn, qwhl[nf])
 
-    # Computing amplification function
-    qwaf[nf] = _np.sqrt((refd*refv)/(qwdn[nf]*qwvs[nf]))
-
-  return qwhl, qwvs, qwdn, qwaf
+  return qwhl, qwvs, qwdn
 
 #-----------------------------------------------------------------------------------------
 
@@ -127,6 +117,35 @@ def QwlFitFunc(z, lnum, hl, sl, fr):
   obj = _np.abs(z-(1/(4.*fr*qwsl)))
   
   return obj
+
+#-----------------------------------------------------------------------------------------
+
+def QwlImpedance(qwvs, qwdn, vsr=[], dnr=[]):
+  """
+  Input
+    qwvs = vector of quarter-wavelength velocities
+    qwdn = vector of quarter-wavelength densities
+    vsr = reference velocity
+    dnr = reference density
+
+  Output:
+    qwaf = vector of quarter-wavelength amp. factors
+  """
+
+  # Initialisation
+  qwvs = _np.array(qwvs)
+  qwdn = _np.array(qwdn)
+
+  # Reference default
+  if not vsr:
+    vsr = qwvs[-1]
+  if not dnr:
+    dnr = qwdn[-1]
+
+  # Computing amplification function
+  qwaf = _np.sqrt((dnr*vsr)/(qwdn*qwvs))
+
+  return qwaf
 
 #-----------------------------------------------------------------------------------------
 
