@@ -113,6 +113,9 @@ class Site1D(object):
     self.Hdr['Z'] = Z
 
     self.Mod = []
+    self.Eng = {}
+
+    self.Freq = []
 
   #---------------------------------------------------------------------------------------
 
@@ -192,7 +195,7 @@ class Site1D(object):
 
   #---------------------------------------------------------------------------------------
 
-  def ComputeTTAV(self, Key='Vs', Z=30.):
+  def ComputeTTAV(self, Key='Vs', Z=30., Index=[], Stat=True):
     """
     Compute and store travel-time average velocity at a given depth (Z).
     Default is Vs30. Multiple depths are also allowed (as list).
@@ -201,7 +204,15 @@ class Site1D(object):
     if type(Z) != list:
       Z = [Z]
 
-    for M in self.Mod:
+    # Selecting site models by index (scalar or list)
+    if _UT.IsEmpty(Index):
+      Mod = self.Mod
+    else:
+      if type(Index) != list:
+        Index = [Index]
+      Mod = [self.Mod[i] for i in Index]
+
+    for M in Mod:
 
       # Initialise Vz data structure
       M.Eng['Vz'] = {}
@@ -211,6 +222,19 @@ class Site1D(object):
         Vz = _SM.TTAverageVelocity(M.Par['Hl'], M.Par[Key], z)
 
         M.Eng['Vz'][z] = _UT.Round(Vz, Decimal)
+
+    if Stat:
+      # Initialise Vz data structure
+      self.Eng['Vz'] = {}
+
+      for z in Z:
+        # Extracting Vz data from site models
+        Data = [M.Eng['Vz'][z] for M in Mod]
+
+        # Compute Vz statistic
+        Mn, Sd = _UT.LogStat(Data)
+        self.Eng['Vz'][float(z)] = (_UT.Round(Mn, Decimal),
+                                    _UT.Round(Sd, Decimal))
 
   #---------------------------------------------------------------------------------------
 
@@ -392,7 +416,7 @@ class SiteDb(object):
 
   #---------------------------------------------------------------------------------------
 
-  def ImportSites(self, AsciiFile, Root='', Filetype=''):
+  def ImportSites(self, AsciiFile, Root='', FileType=''):
     """
     Import multiple site models from a csv list with format:
     'Id','X','Y','Z','File'
@@ -410,36 +434,19 @@ class SiteDb(object):
                  Table.data['X'],
                  Table.data['Y'],
                  Table.data['Z'])
-      S.ImportModel(Table.data['File'],
-                    Filetype=Filetype)
-      self.AddSite(S)
+
+      S.ImportModel(Root + Table.data['File'], FileType=FileType)
+      self.AddSite(Site=S)
 
   #---------------------------------------------------------------------------------------
 
-  def ComputeTTAV(self, Key='Vs', Z=30., Average=False):
+  def ComputeTTAV(self, Key='Vs', Z=30., Average=True):
     """
     Compute average velocities for all sites in the database.
     """
 
-    if type(Z) != list:
-      Z = [Z]
-
-    """
-    # TO CHECK
-    # Initialise Vz data structure, if empty
-    if _IsEmpty(self.Eng['Vz'])[0]:
-      self.Eng['Vz'] = {}
-
     for S in self.Site:
       S.ComputeTTAV(Key=Key, Z=Z)
-
-    if Average:
-      for z in Z:
-        Data = [S.Eng['Vz'][z] for S in self.Site]
-        Mn = _np.exp(_np.mean(_np.log(Data)))
-        Sd = _np.exp(_np.std(_np.log(Data)))
-        self.Eng['Vz'][float(z)] = [Mn, Sd]
-    """
 
   #---------------------------------------------------------------------------------------
 

@@ -66,3 +66,23 @@ def Round(Number, Decimal=3):
     Number = round(Number, Decimal)
 
   return Number
+
+#-----------------------------------------------------------------------------------------
+
+def LinStat(Data):
+  """
+  """
+
+  Mn = _np.mean(Data)
+  Sd = _np.std(Data)
+
+  return  (Mn, Sd)
+
+def LogStat(Data):
+  """
+  """
+
+  Mn = _np.exp(_np.mean(_np.log(Data)))
+  Sd = _np.exp(_np.std(_np.log(Data)))
+
+  return (Mn, Sd)
